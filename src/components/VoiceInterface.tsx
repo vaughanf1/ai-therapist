@@ -77,7 +77,8 @@ export function VoiceInterface({ currentSession, onSessionStart, onSessionComple
   }
 
   const handleConnect = async () => {
-    const apiKey = localStorage.getItem('openai_api_key')
+    // Try to get API key from environment first, then fallback to localStorage
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('openai_api_key')
     if (!apiKey) {
       alert('Please set your OpenAI API key in Settings first')
       return

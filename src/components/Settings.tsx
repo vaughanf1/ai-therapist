@@ -25,6 +25,7 @@ export function Settings() {
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('openai_api_key')
+    const envApiKey = import.meta.env.VITE_OPENAI_API_KEY
     const storedVolume = localStorage.getItem('voice_volume')
     const storedAutoTranscribe = localStorage.getItem('auto_transcribe')
     const storedDataRetention = localStorage.getItem('data_retention_days')
@@ -32,7 +33,11 @@ export function Settings() {
     const storedTherapistPreset = localStorage.getItem('therapist_preset')
     const storedSelectedVoice = localStorage.getItem('selected_voice')
 
-    if (storedApiKey) setApiKey(storedApiKey)
+    if (envApiKey) {
+      setApiKey('Environment API key configured ✓')
+    } else if (storedApiKey) {
+      setApiKey(storedApiKey)
+    }
     if (storedVolume) setVolume(parseFloat(storedVolume))
     if (storedAutoTranscribe) setAutoTranscribe(storedAutoTranscribe === 'true')
     if (storedDataRetention) setDataRetention(storedDataRetention)
@@ -50,14 +55,17 @@ export function Settings() {
   }, [])
 
   const handleSave = () => {
-    localStorage.setItem('openai_api_key', apiKey)
+    // Only save API key if it's not the environment placeholder
+    if (apiKey !== 'Environment API key configured ✓') {
+      localStorage.setItem('openai_api_key', apiKey)
+    }
     localStorage.setItem('voice_volume', volume.toString())
     localStorage.setItem('auto_transcribe', autoTranscribe.toString())
     localStorage.setItem('data_retention_days', dataRetention)
     localStorage.setItem('custom_instructions', customInstructions)
     localStorage.setItem('therapist_preset', therapistPreset)
     localStorage.setItem('selected_voice', selectedVoice)
-    
+
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -140,7 +148,12 @@ export function Settings() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="sk-..."
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-neutral-200 focus:border-primary focus:ring-0 focus:outline-none transition-colors duration-200 bg-white pr-12 text-sm sm:text-base"
+                  disabled={import.meta.env.VITE_OPENAI_API_KEY ? true : false}
+                  className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-neutral-200 focus:border-primary focus:ring-0 focus:outline-none transition-colors duration-200 pr-12 text-sm sm:text-base ${
+                    import.meta.env.VITE_OPENAI_API_KEY
+                      ? 'bg-neutral-50 text-neutral-600 cursor-not-allowed'
+                      : 'bg-white'
+                  }`}
                 />
                 <button
                   type="button"
