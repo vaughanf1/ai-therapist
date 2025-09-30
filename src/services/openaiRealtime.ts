@@ -217,31 +217,47 @@ ${customInstructions}`
   private handleRealtimeEvent(data: string) {
     try {
       const event = JSON.parse(data)
-      console.log('Realtime event:', event.type)
-      
+      console.log('Realtime event:', event.type, event)
+
       switch (event.type) {
         case 'conversation.item.input_audio_transcription.completed':
           if (this.onTranscription && event.transcript) {
+            console.log('User transcript:', event.transcript)
             this.onTranscription(event.transcript, 'user')
           }
           break
-          
+
+        case 'conversation.item.created':
+          // Handle when user speaks
+          if (event.item?.type === 'message' && event.item?.role === 'user') {
+            console.log('User message detected')
+          }
+          break
+
         case 'response.audio_transcript.delta':
           if (this.onTranscription && event.delta) {
+            console.log('AI transcript delta:', event.delta)
             this.onTranscription(event.delta, 'ai')
           }
           break
-          
+
+        case 'response.audio_transcript.done':
+          if (this.onTranscription && event.transcript) {
+            console.log('AI transcript complete:', event.transcript)
+            this.onTranscription(event.transcript, 'ai')
+          }
+          break
+
         case 'response.done':
           console.log('Response completed')
           break
-          
+
         case 'error':
           console.error('OpenAI Realtime error:', event.error)
           break
-          
+
         default:
-          console.log('Unknown event type:', event.type)
+          console.log('Event type:', event.type)
       }
     } catch (error) {
       console.error('Error parsing realtime event:', error)
