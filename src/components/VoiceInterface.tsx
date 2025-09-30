@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Volume2, 
-  VolumeX, 
+import {
+  Volume2,
+  VolumeX,
   PhoneOff,
   Waves
 } from 'lucide-react'
 import { OpenAIRealtimeService } from '../services/openaiRealtime'
-import { Session, TranscriptEntry, AssessmentData } from '../types'
+import { Session, TranscriptEntry, AssessmentData, ProgressCard } from '../types'
 import { FluidVoiceVisualizer } from './FluidVoiceVisualizer'
+import { detectMilestones } from '../utils/milestoneDetection'
 
 interface VoiceInterfaceProps {
   currentSession: Session | null
@@ -159,26 +160,104 @@ export function VoiceInterface({ currentSession, onSessionStart, onSessionComple
     if (realtimeServiceRef.current) {
       realtimeServiceRef.current.disconnect()
     }
-    
+
     if (audioContextRef.current) {
       audioContextRef.current.close()
       audioContextRef.current = null
     }
-    
+
     setIsConnected(false)
     setIsListening(false)
     setIsAISpeaking(false)
     setConnectionStatus('disconnected')
-    
+
     if (currentSession) {
-      const completedSession = {
+      // Detect milestones from transcript
+      const milestones = detectMilestones(transcript)
+      console.log('Detected milestones:', milestones)
+
+      // Generate progress cards from milestones
+      const progressCards: ProgressCard[] = milestones.map(milestone => ({
+        id: `card-${milestone.id}`,
+        sessionId: currentSession.id,
+        title: milestone.title,
+        description: milestone.description,
+        milestone,
+        createdAt: new Date(),
+        color: getColorForMilestone(milestone.type),
+        icon: getIconForMilestone(milestone.type)
+      }))
+
+      const completedSession: Session = {
         ...currentSession,
         endTime: new Date(),
         duration: Date.now() - currentSession.startTime.getTime(),
-        transcript
+        transcript,
+        milestones,
+        progressCards
       }
+
+      // Save session to localStorage for history
+      const savedSessions = localStorage.getItem('session_history')
+      const sessions = savedSessions ? JSON.parse(savedSessions) : []
+      sessions.push({
+        ...completedSession,
+        startTime: completedSession.startTime.toISOString(),
+        endTime: completedSession.endTime?.toISOString(),
+        transcript: transcript.map(t => ({
+          ...t,
+          timestamp: t.timestamp.toISOString()
+        })),
+        milestones: milestones.map(m => ({
+          ...m,
+          achievedAt: m.achievedAt.toISOString()
+        })),
+        progressCards: progressCards.map(p => ({
+          ...p,
+          createdAt: p.createdAt.toISOString(),
+          milestone: {
+            ...p.milestone,
+            achievedAt: p.milestone.achievedAt.toISOString()
+          }
+        }))
+      })
+      localStorage.setItem('session_history', JSON.stringify(sessions))
+      console.log('Session saved to history:', completedSession)
+
       onSessionComplete(completedSession)
     }
+  }
+
+  const getColorForMilestone = (type: string): string => {
+    const colors: Record<string, string> = {
+      emotional_breakthrough: '#FF6B6B',
+      self_awareness: '#4ECDC4',
+      coping_strategy: '#45B7D1',
+      goal_setting: '#FFA07A',
+      anxiety_management: '#98D8C8',
+      communication_improvement: '#F7DC6F',
+      confidence_building: '#BB8FCE',
+      relationship_insight: '#F8B88B',
+      stress_relief: '#85C1E9',
+      mindfulness_practice: '#82E0AA'
+    }
+    return colors[type] || '#0A84FF'
+  }
+
+  const getIconForMilestone = (type: string): string => {
+    const icons: Record<string, string> = {
+      emotional_breakthrough: '🌟',
+      self_awareness: '🪞',
+      coping_strategy: '🛠️',
+      goal_setting: '🎯',
+      anxiety_management: '😌',
+      communication_improvement: '💬',
+      confidence_building: '💪',
+      relationship_insight: '🤝',
+      stress_relief: '🧘',
+      mindfulness_practice: '🧠'
+    }
+    return icons[type] || '✨'
   }
 
   const toggleMute = () => {

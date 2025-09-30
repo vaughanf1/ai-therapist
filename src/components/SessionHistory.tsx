@@ -21,7 +21,7 @@ export function SessionHistory() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
 
   useEffect(() => {
-    const storedSessions = localStorage.getItem('therapy_sessions')
+    const storedSessions = localStorage.getItem('session_history')
     if (storedSessions) {
       try {
         const parsed = JSON.parse(storedSessions)
@@ -29,14 +29,22 @@ export function SessionHistory() {
           ...s,
           startTime: new Date(s.startTime),
           endTime: s.endTime ? new Date(s.endTime) : undefined,
-          transcript: s.transcript.map((t: any) => ({
+          transcript: s.transcript?.map((t: any) => ({
             ...t,
             timestamp: new Date(t.timestamp)
-          })),
-          milestones: s.milestones.map((m: any) => ({
+          })) || [],
+          milestones: s.milestones?.map((m: any) => ({
             ...m,
             achievedAt: new Date(m.achievedAt)
-          }))
+          })) || [],
+          progressCards: s.progressCards?.map((p: any) => ({
+            ...p,
+            createdAt: new Date(p.createdAt),
+            milestone: {
+              ...p.milestone,
+              achievedAt: new Date(p.milestone.achievedAt)
+            }
+          })) || []
         })))
       } catch (error) {
         console.error('Error parsing sessions:', error)
