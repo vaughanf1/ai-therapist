@@ -57,7 +57,9 @@ export class OpenAIRealtimeService {
       }
 
       const sessionData = await sessionResponse.json()
-      console.log('Session created successfully')
+      console.log('Session created successfully:', sessionData)
+      console.log('Session config - model:', sessionData.model, 'voice:', sessionData.voice)
+      console.log('Input audio transcription enabled:', sessionData.input_audio_transcription)
 
       // 2) Ask browser for mic permission + stream
       console.log('Requesting microphone access...')
@@ -75,6 +77,15 @@ export class OpenAIRealtimeService {
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
       })
 
+      // Monitor connection state
+      this.peerConnection.onconnectionstatechange = () => {
+        console.log('WebRTC connection state:', this.peerConnection?.connectionState)
+      }
+
+      this.peerConnection.oniceconnectionstatechange = () => {
+        console.log('ICE connection state:', this.peerConnection?.iceConnectionState)
+      }
+
       // Play model audio output
       this.audioElement = document.createElement('audio')
       this.audioElement.autoplay = true
@@ -90,8 +101,26 @@ export class OpenAIRealtimeService {
 
       // Send mic to the model
       micStream.getTracks().forEach(track => {
+        console.log('Adding microphone track:', track.label, 'enabled:', track.enabled)
         this.peerConnection?.addTrack(track, micStream)
       })
+
+      // Monitor microphone audio levels
+      const audioContext = new AudioContext()
+      const source = audioContext.createMediaStreamSource(micStream)
+      const analyser = audioContext.createAnalyser()
+      source.connect(analyser)
+      analyser.fftSize = 256
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+
+      const checkAudioLevel = () => {
+        analyser.getByteFrequencyData(dataArray)
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length
+        if (average > 10) {
+          console.log('Microphone audio detected, level:', average)
+        }
+      }
+      setInterval(checkAudioLevel, 1000)
 
       // 4) Create a data channel for events/JSON
       this.dataChannel = this.peerConnection.createDataChannel('oai-events')
