@@ -30,9 +30,15 @@ export class OpenAIRealtimeService {
 
     try {
       console.log('Getting ephemeral session from server...')
-      
+
+      // Determine API URL based on environment
+      const API_URL = import.meta.env.VITE_API_URL ||
+                      (window.location.hostname === 'localhost'
+                        ? 'http://localhost:3001'
+                        : window.location.origin);
+
       // 1) Get an ephemeral session from your backend
-      const sessionResponse = await fetch('http://localhost:3001/session', {
+      const sessionResponse = await fetch(`${API_URL}/api/session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
